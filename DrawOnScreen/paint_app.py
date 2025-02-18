@@ -1,0 +1,573 @@
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSizeGrip, QInputDialog, QDialog, QLineEdit
+from PyQt5.QtWidgets import QPushButton, QSlider, QLabel, QColorDialog, QFontDialog
+from PyQt5.QtCore import Qt, QPoint, QRect
+from PyQt5.QtGui import QPainter, QPen, QColor, QImage, QFont, QFontMetrics, QScreen
+import sys
+
+# Add new TitleBar class
+class TitleBar(QWidget):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Set fixed height for title bar
+        self.setFixedHeight(35)
+        
+        # Left spacer
+        layout.addStretch(1)
+        
+        # Title label with centered text
+        title = QLabel("                                           Drawing On Screen                                         ")
+        title.setStyleSheet("""
+            QLabel {
+                color: #333333;
+                font-size: 14px;
+                font-weight: bold;
+                background-color: white;
+                width: 100%;
+            }
+        """)
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        # Right spacer and close button
+        layout.addStretch(1)
+        
+        # Close button
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(30, 30)
+        close_btn.clicked.connect(self.parent.close)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #333333;
+                font-size: 20px;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #ff0000;
+                color: white;
+            }
+        """)
+        
+        layout.addWidget(close_btn)
+        
+        self.setLayout(layout)
+        
+        self.start = QPoint(0, 0)
+        self.pressing = False
+        
+    def mousePressEvent(self, event):
+        self.start = self.mapToGlobal(event.pos())
+        self.pressing = True
+
+    def mouseMoveEvent(self, event):
+        if self.pressing:
+            end = self.mapToGlobal(event.pos())
+            movement = end - self.start
+            self.parent.setGeometry(
+                self.parent.x() + movement.x(),
+                self.parent.y() + movement.y(),
+                self.parent.width(),
+                self.parent.height()
+            )
+            self.start = end
+
+    def mouseReleaseEvent(self, event):
+        self.pressing = False
+
+class TextInputDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.setMinimumWidth(300)
+        
+        # Set dialog background and border
+        self.setStyleSheet("""
+            QDialog {
+                background-color: rgba(255, 255, 255, 240);
+                border: 1px solid #333333;
+                border-radius: 5px;
+            }
+        """)
+        
+        # Create layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Add a label
+        label = QLabel("Enter Text:")
+        label.setStyleSheet("""
+            QLabel {
+                color: #333333;
+                font-size: 12px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+        """)
+        layout.addWidget(label)
+        
+        # Create text input
+        self.text_input = QLineEdit()
+        self.text_input.setMinimumHeight(40)
+        self.text_input.setStyleSheet("""
+            QLineEdit {
+                padding: 10px;
+                border: 1px solid #cccccc;
+                border-radius: 3px;
+                background-color: white;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #007bff;
+            }
+        """)
+        
+        # Add to layout
+        layout.addWidget(self.text_input)
+        
+    def get_text(self):
+        if self.exec_() == QDialog.Accepted:
+            return self.text_input.text(), True
+        return "", False
+        
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self.accept()
+        elif event.key() == Qt.Key_Escape:
+            self.reject()
+
+class TextElement:
+    def __init__(self, text, pos, font, color):
+        self.text = text
+        self.pos = pos
+        self.font = font
+        self.color = color
+        self.rect = None
+        self.update_rect()
+    
+    def update_rect(self):
+        metrics = QFontMetrics(self.font)
+        rect = metrics.boundingRect(self.text)
+        self.rect = QRect(self.pos.x(), self.pos.y() - rect.height(), 
+                         rect.width(), rect.height())
+    
+    def contains(self, point):
+        return self.rect.contains(point)
+
+class Canvas(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumSize(800, 600)
+        # Make widget background transparent
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.drawing = False
+        self.last_point = QPoint()
+        self.current_color = QColor(0, 0, 0)  # Default black
+        self.brush_size = 2
+        self.current_font = QFont('Arial', 12)
+        self.text_mode = False
+        self.text_elements = []
+        self.dragging_text = None
+        self.drag_offset = QPoint()
+        
+        # Add border style
+        self.setStyleSheet("""
+            QWidget {
+                border: 1px solid #333333;
+                border-radius: 5px;
+                background-color: transparent;
+            }
+        """)
+        
+        # Initialize empty image
+        self.image = None
+        self.clear_canvas()
+        
+        # Add history for undo/redo
+        self.history = []
+        self.current_step = -1
+        self.save_state()  # Save initial blank state
+        
+    def clear_canvas(self):
+        self.image = QImage(self.size(), QImage.Format_ARGB32)
+        self.image.fill(Qt.transparent)  # Make background transparent
+        self.text_elements.clear()  # Clear text elements too
+        self.update()
+
+    def save_state(self):
+        # Remove any redo states
+        if self.current_step + 1 < len(self.history):
+            self.history = self.history[:self.current_step + 1]
+            
+        # Save current state
+        current_image = self.image.copy()
+        current_texts = [TextElement(t.text, t.pos, t.font, t.color) for t in self.text_elements]
+        self.history.append((current_image, current_texts))
+        self.current_step += 1
+        
+    def undo(self):
+        if self.current_step > 0:
+            self.current_step -= 1
+            self.image, self.text_elements = self.history[self.current_step]
+            self.image = self.image.copy()
+            self.text_elements = [TextElement(t.text, t.pos, t.font, t.color) for t in self.text_elements]
+            self.update()
+            
+    def redo(self):
+        if self.current_step + 1 < len(self.history):
+            self.current_step += 1
+            self.image, self.text_elements = self.history[self.current_step]
+            self.image = self.image.copy()
+            self.text_elements = [TextElement(t.text, t.pos, t.font, t.color) for t in self.text_elements]
+            self.update()
+
+    def mousePressEvent(self, event):
+        if self.text_mode:
+            dialog = TextInputDialog(self)
+            dialog.move(event.globalPos())
+            text, ok = dialog.get_text()
+            if ok and text:
+                text_elem = TextElement(text, event.pos(), 
+                                      self.current_font, 
+                                      self.current_color)
+                self.text_elements.append(text_elem)
+                self.update()
+        else:
+            # Check if clicking on existing text
+            for text_elem in self.text_elements:
+                if text_elem.contains(event.pos()):
+                    self.dragging_text = text_elem
+                    self.drag_offset = event.pos() - text_elem.pos
+                    return
+            
+            # If not clicking text, handle normal drawing
+            if event.button() == Qt.LeftButton:
+                self.drawing = True
+                self.last_point = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.dragging_text:
+            self.dragging_text.pos = event.pos() - self.drag_offset
+            self.dragging_text.update_rect()
+            self.update()
+        elif event.buttons() & Qt.LeftButton and self.drawing:
+            painter = QPainter(self.image)
+            painter.setPen(QPen(self.current_color, self.brush_size, 
+                              Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+            painter.drawLine(self.last_point, event.pos())
+            self.last_point = event.pos()
+            self.update()
+
+    def mouseReleaseEvent(self, event):
+        if self.dragging_text or self.drawing:
+            self.save_state()  # Save state after drawing or moving text
+        self.dragging_text = None
+        if event.button() == Qt.LeftButton:
+            self.drawing = False
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.drawImage(0, 0, self.image)
+        
+        # Draw text elements
+        for text_elem in self.text_elements:
+            painter.setFont(text_elem.font)
+            painter.setPen(QPen(text_elem.color))
+            painter.drawText(text_elem.pos, text_elem.text)
+
+    def resizeEvent(self, event):
+        if self.image is None:
+            self.image = QImage(self.size(), QImage.Format_ARGB32)
+            self.image.fill(Qt.transparent)
+        else:
+            # Create new image with new size
+            new_image = QImage(self.size(), QImage.Format_ARGB32)
+            new_image.fill(Qt.transparent)
+            
+            # Draw old image onto new image
+            painter = QPainter(new_image)
+            painter.drawImage(0, 0, self.image)
+            painter.end()
+            
+            # Replace old image with new image
+            self.image = new_image
+
+class PaintApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Paint App")
+        
+        # Create main widget and layout
+        main_widget = QWidget()
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        
+        # Create canvas first
+        self.canvas = Canvas()
+        
+        # Update main widget style with resize grip styling
+        main_widget.setStyleSheet("""
+            QWidget {
+                border: 3px solid #333333;
+                border-radius: 5px;
+                background-color: rgba(240, 240, 240, 10);
+            }
+            QPushButton {
+                color: #333333;
+                background-color: #ffffff;
+                border: 3px solid #cccccc;
+                padding: 5px;
+                border-radius: 3px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+            QSlider {
+                background-color: rgba(240, 240, 240, 10);
+            }
+            QSizeGrip {
+                background-color: transparent;
+                width: 16px;
+                height: 16px;
+            }
+            QLabel {
+                font-weight: bold;
+                font-size: 12px;
+            }
+        """)
+        
+        self.setCentralWidget(main_widget)
+        layout = QVBoxLayout(main_widget)
+        
+        # Add title bar
+        self.title_bar = TitleBar(self)
+        
+        # Create controls
+        controls_layout = QHBoxLayout()
+        
+        # Text button
+        self.text_btn = QPushButton("Add Text")
+        self.text_btn.clicked.connect(self.toggle_text_mode)
+        self.text_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+            QPushButton[active="true"] {
+                background-color: #007bff;
+                color: white;
+                border: 1px solid #0056b3;
+            }
+            QPushButton[active="true"]:hover {
+                background-color: #0056b3;
+            }
+        """)
+        
+        # Font button
+        font_btn = QPushButton("Choose Font")
+        font_btn.clicked.connect(self.change_font)
+        font_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+        
+        # Color button
+        color_btn = QPushButton("Choose Color")
+        color_btn.clicked.connect(self.change_color)
+        color_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+        
+        # Clear button
+        clear_btn = QPushButton("Clear Canvas")
+        clear_btn.clicked.connect(self.canvas.clear_canvas)
+        clear_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+
+        # Brush size slider
+        slider_label = QLabel("Brush Size:")
+        slider_label.setStyleSheet("""
+            QLabel {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+        """)
+        
+        self.brush_slider = QSlider(Qt.Horizontal)
+        self.brush_slider.setMinimum(1)
+        self.brush_slider.setMaximum(50)
+        self.brush_slider.setValue(2)
+        self.brush_slider.valueChanged.connect(self.change_brush_size)
+        
+        # Capture button
+        capture_btn = QPushButton("Capture Screen")
+        capture_btn.clicked.connect(self.capture_screen)
+        capture_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+        
+        # Undo button
+        undo_btn = QPushButton("↶ Undo")
+        undo_btn.clicked.connect(self.canvas.undo)
+        undo_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+        
+        # Redo button
+        redo_btn = QPushButton("↷ Redo")
+        redo_btn.clicked.connect(self.canvas.redo)
+        redo_btn.setStyleSheet("""
+            QPushButton {
+                color: #333333;
+                background-color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                min-height: 20px;
+                border: 1px solid #cccccc;
+            }
+            QPushButton:hover {
+                background-color: #eeeeee;
+            }
+        """)
+        
+        # Add widgets to controls layout
+        controls_layout.addWidget(self.text_btn)
+        controls_layout.addWidget(font_btn)
+        controls_layout.addWidget(color_btn)
+        controls_layout.addWidget(clear_btn)
+        controls_layout.addWidget(slider_label)
+        controls_layout.addWidget(self.brush_slider)
+        controls_layout.addWidget(capture_btn)
+        controls_layout.addWidget(undo_btn)
+        controls_layout.addWidget(redo_btn)
+        controls_layout.addStretch()
+        
+        # Create bottom layout for resize grip
+        bottom_layout = QHBoxLayout()
+        bottom_layout.addStretch()
+        
+        # Add size grip
+        size_grip = QSizeGrip(self)
+        bottom_layout.addWidget(size_grip)
+        
+        # Create controls frame with fixed height
+        controls_frame = QWidget()
+        controls_frame.setFixedHeight(50)
+        controls_frame.setLayout(controls_layout)
+        
+        # Add layouts to main layout
+        layout.addWidget(self.title_bar)
+        layout.addWidget(controls_frame)
+        layout.addWidget(self.canvas, 1)  # Add stretch factor
+        layout.addLayout(bottom_layout)
+        
+    def change_color(self):
+        color = QColorDialog.getColor()
+        if color.isValid():
+            self.canvas.current_color = color
+            
+    def change_brush_size(self, size):
+        self.canvas.brush_size = size
+
+    def toggle_text_mode(self):
+        self.canvas.text_mode = not self.canvas.text_mode
+        # Update button appearance
+        self.text_btn.setProperty("active", "true" if self.canvas.text_mode else "false")
+        self.text_btn.style().unpolish(self.text_btn)
+        self.text_btn.style().polish(self.text_btn)
+        
+    def change_font(self):
+        font, ok = QFontDialog.getFont(self.canvas.current_font, self)
+        if ok:
+            self.canvas.current_font = font
+
+    def capture_screen(self):
+        # Get canvas position and size in global coordinates
+        canvas_geo = self.canvas.geometry()
+        canvas_pos = self.canvas.mapToGlobal(QPoint(0, 0))
+        
+        # Capture the screen area of just the canvas
+        screen = QApplication.primaryScreen()
+        screenshot = screen.grabWindow(
+            0,  # Window ID (0 means entire screen)
+            canvas_pos.x(),  # X coordinate of canvas in screen coordinates
+            canvas_pos.y(),  # Y coordinate of canvas in screen coordinates
+            canvas_geo.width(),  # Width of canvas
+            canvas_geo.height()  # Height of canvas
+        )
+        
+        # Copy to clipboard
+        clipboard = QApplication.clipboard()
+        clipboard.setImage(screenshot.toImage())
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = PaintApp()
+    window.show()
+    sys.exit(app.exec_()) 
