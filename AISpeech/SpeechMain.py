@@ -20,7 +20,7 @@ logging.basicConfig(
     ]
 )
 
-model = Model(r"./vosk-model-cn-0.22")
+model = Model(r"./vosk-model-small-cn-0.22")
 #model = Model(r"./vosk-model-en-us-0.22")
 # You can also specify the possible word list
 #rec = KaldiRecognizer(model, 16000, "zero oh one two three four five six seven eight nine")

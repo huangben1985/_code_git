@@ -1,0 +1,5 @@
+vosk
+pyaudio
+dotenv
+openai
+azure-cognitiveservices-speech
