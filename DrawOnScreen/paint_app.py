@@ -15,36 +15,47 @@ class TitleBar(QWidget):
         # Set fixed height for title bar
         self.setFixedHeight(35)
         
-        # Left spacer
-        layout.addStretch(1)
+        # Create title bar widget with its own layout
+        titleBar = QWidget()
+        titleBar.setFixedHeight(35)
+        titleBarLayout = QHBoxLayout(titleBar)
+        titleBarLayout.setContentsMargins(0, 0, 0, 0)
         
-        # Title label with centered text
-        title = QLabel("                                           Drawing On Screen                                         ")
+        titleBar.setStyleSheet("""
+            QWidget {
+                background-color: gray;
+                border: 1px solid DarkOrange;
+            }
+        """)
+        
+        # Create and add title to titleBar
+        title = QLabel("Drawing On Screen")
         title.setStyleSheet("""
             QLabel {
-                color: #333333;
-                font-size: 14px;
+                color: DarkOrange;
+                font-family: "Comic Sans MS";
+                font-size: 25px;
                 font-weight: bold;
-                background-color: white;
                 width: 100%;
+                border: 1px solid DarkOrange;
             }
         """)
         title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        titleBarLayout.addWidget(title)
         
-        # Right spacer and close button
-        layout.addStretch(1)
+        # Add titleBar to main layout
+        layout.addWidget(titleBar)
         
         # Close button
         close_btn = QPushButton("×")
-        close_btn.setFixedSize(30, 30)
+        close_btn.setFixedSize(50, 50)
         close_btn.clicked.connect(self.parent.close)
         close_btn.setStyleSheet("""
             QPushButton {
-                background-color: transparent;
-                color: #333333;
-                font-size: 20px;
-                border: none;
+                background-color: gray;
+                color: DarkOrange;
+                font-size: 30px;
+                border: 1px solid DarkOrange;
             }
             QPushButton:hover {
                 background-color: #ff0000;
@@ -82,7 +93,7 @@ class TextInputDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
-        self.setMinimumWidth(300)
+        self.setMinimumWidth(400)
         
         # Set dialog background and border
         self.setStyleSheet("""
@@ -102,16 +113,18 @@ class TextInputDialog(QDialog):
         label.setStyleSheet("""
             QLabel {
                 color: #333333;
-                font-size: 12px;
+                font-size: 15px;
                 font-weight: bold;
                 margin-bottom: 5px;
+                border: none;
+                
             }
         """)
         layout.addWidget(label)
         
         # Create text input
         self.text_input = QLineEdit()
-        self.text_input.setMinimumHeight(40)
+        self.text_input.setMinimumHeight(80)
         self.text_input.setStyleSheet("""
             QLineEdit {
                 padding: 10px;
@@ -160,24 +173,26 @@ class TextElement:
 class Canvas(QWidget):
     def __init__(self):
         super().__init__()
-        self.setMinimumSize(800, 600)
+        # self.setMinimumSize(1600, 900)  # Updated minimum size
         # Make widget background transparent
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.drawing = False
         self.last_point = QPoint()
-        self.current_color = QColor(0, 0, 0)  # Default black
+        self.current_color = QColor(250, 0, 0)  # Default black
         self.brush_size = 2
         self.current_font = QFont('Arial', 12)
         self.text_mode = False
         self.text_elements = []
         self.dragging_text = None
         self.drag_offset = QPoint()
-        
-        # Add border style
-        self.setStyleSheet("""
+
+
+        # Create frame widget with updated style
+        self.frame = QWidget(self)
+        self.frame.setStyleSheet("""
             QWidget {
-                border: 1px solid #333333;
-                border-radius: 5px;
+                border: none; 
+                border-radius: 2px;
                 background-color: transparent;
             }
         """)
@@ -190,7 +205,8 @@ class Canvas(QWidget):
         self.history = []
         self.current_step = -1
         self.save_state()  # Save initial blank state
-        
+                
+
     def clear_canvas(self):
         self.image = QImage(self.size(), QImage.Format_ARGB32)
         self.image.fill(Qt.transparent)  # Make background transparent
@@ -279,6 +295,9 @@ class Canvas(QWidget):
             painter.drawText(text_elem.pos, text_elem.text)
 
     def resizeEvent(self, event):
+        # Update frame size to match canvas
+        self.frame.setGeometry(4, 4, self.width()-8, self.height()-8)  # Account for padding
+        
         if self.image is None:
             self.image = QImage(self.size(), QImage.Format_ARGB32)
             self.image.fill(Qt.transparent)
@@ -299,7 +318,10 @@ class PaintApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Paint App")
-        
+ 
+        # Set initial window size
+        self.resize(1600, 900)
+
         # Create main widget and layout
         main_widget = QWidget()
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -308,37 +330,53 @@ class PaintApp(QMainWindow):
         # Create canvas first
         self.canvas = Canvas()
         
-        # Update main widget style with resize grip styling
-        main_widget.setStyleSheet("""
-            QWidget {
-                border: 3px solid #333333;
-                border-radius: 5px;
-                background-color: rgba(240, 240, 240, 10);
-            }
+        # Define common button style
+        self.BUTTON_STYLE = """
             QPushButton {
-                color: #333333;
-                background-color: #ffffff;
-                border: 3px solid #cccccc;
-                padding: 5px;
+                color: black;
+                background-color: DarkOrange;
+                padding: 3px 10px;
                 border-radius: 3px;
+                min-height: 20px;
+                height: 26px;
+                border: none;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 15px;
             }
             QPushButton:hover {
-                background-color: #eeeeee;
+                background-color: DarkOrange;
+                color: white;
             }
-            QSlider {
-                background-color: rgba(240, 240, 240, 10);
+            QPushButton[active="true"] {
+                background-color: DarkOrange;
+                color: white;
+                border: 1px solid white;
             }
-            QSizeGrip {
+            QPushButton[active="true"]:hover {
+                background-color: rgb(255, 140, 0);
+            }
+        """
+        
+        # Update main widget style
+        main_widget.setStyleSheet(f"""
+            QWidget {{
+                border: 1px solid DarkOrange;
+                border-radius: 3px;
+                background-color: rgba(0, 0, 0, 10);
+            }}
+            {self.BUTTON_STYLE}
+            QSlider {{
+                background-color: rgb(246, 247, 243);
+            }}
+            QSizeGrip {{
                 background-color: transparent;
-                width: 16px;
+                width: 56px;
                 height: 16px;
-            }
-            QLabel {
+            }}
+            QLabel {{
                 font-weight: bold;
                 font-size: 12px;
-            }
+            }}
         """)
         
         self.setCentralWidget(main_widget)
@@ -353,92 +391,34 @@ class PaintApp(QMainWindow):
         # Text button
         self.text_btn = QPushButton("Add Text")
         self.text_btn.clicked.connect(self.toggle_text_mode)
-        self.text_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-            QPushButton[active="true"] {
-                background-color: #007bff;
-                color: white;
-                border: 1px solid #0056b3;
-            }
-            QPushButton[active="true"]:hover {
-                background-color: #0056b3;
-            }
-        """)
+        self.text_btn.setStyleSheet(self.BUTTON_STYLE)
         
         # Font button
         font_btn = QPushButton("Choose Font")
         font_btn.clicked.connect(self.change_font)
-        font_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-        
+        font_btn.setStyleSheet(self.BUTTON_STYLE)
         # Color button
         color_btn = QPushButton("Choose Color")
         color_btn.clicked.connect(self.change_color)
-        color_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-        
+        color_btn.setStyleSheet(self.BUTTON_STYLE)
         # Clear button
         clear_btn = QPushButton("Clear Canvas")
         clear_btn.clicked.connect(self.canvas.clear_canvas)
-        clear_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-
-        # Brush size slider
+        clear_btn.setStyleSheet(self.BUTTON_STYLE)
+        # Brush size slider label
         slider_label = QLabel("Brush Size:")
         slider_label.setStyleSheet("""
             QLabel {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
+                color: rgb(5, 5, 2);
+                background-color: gray;
+                padding: 1px 1px;
+                border-radius: 2px;
+                min-height: 10px;
+                border: 1px solid DarkOrange;
             }
         """)
         
+        # Add brush slider back
         self.brush_slider = QSlider(Qt.Horizontal)
         self.brush_slider.setMinimum(1)
         self.brush_slider.setMaximum(50)
@@ -448,54 +428,15 @@ class PaintApp(QMainWindow):
         # Capture button
         capture_btn = QPushButton("Capture Screen")
         capture_btn.clicked.connect(self.capture_screen)
-        capture_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-        
+        capture_btn.setStyleSheet(self.BUTTON_STYLE)
         # Undo button
         undo_btn = QPushButton("↶ Undo")
         undo_btn.clicked.connect(self.canvas.undo)
-        undo_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-        
+        undo_btn.setStyleSheet(self.BUTTON_STYLE)
         # Redo button
         redo_btn = QPushButton("↷ Redo")
         redo_btn.clicked.connect(self.canvas.redo)
-        redo_btn.setStyleSheet("""
-            QPushButton {
-                color: #333333;
-                background-color: white;
-                padding: 5px 10px;
-                border-radius: 3px;
-                min-height: 20px;
-                border: 1px solid #cccccc;
-            }
-            QPushButton:hover {
-                background-color: #eeeeee;
-            }
-        """)
-        
+        redo_btn.setStyleSheet(self.BUTTON_STYLE)
         # Add widgets to controls layout
         controls_layout.addWidget(self.text_btn)
         controls_layout.addWidget(font_btn)
@@ -520,6 +461,16 @@ class PaintApp(QMainWindow):
         controls_frame = QWidget()
         controls_frame.setFixedHeight(50)
         controls_frame.setLayout(controls_layout)
+        controls_frame.setStyleSheet("""
+            QWidget {
+                color: rgb(5, 5, 2);
+                border: 1px solid DarkOrange;
+                border-radius: 3px;
+                background-color: gray;
+                height: 20px;
+                font-size: 15px;
+            }
+        """)
         
         # Add layouts to main layout
         layout.addWidget(self.title_bar)
