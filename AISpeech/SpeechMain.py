@@ -1,6 +1,11 @@
 #https://alphacephei.com/vosk/models
-# install pyaudio
 #lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
+#pip install azure-cognitiveservices-speech
+#pip install openai
+#pip install vosk
+#pip install pyaudio 
+#pip install python-dotenv
+
 
 from vosk import Model, KaldiRecognizer
 import pyaudio
