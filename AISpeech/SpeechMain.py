@@ -20,7 +20,7 @@ logging.basicConfig(
     ]
 )
 
-model = Model(r"./vosk-model-small-cn-0.22")
+model = Model(r"./vosk-model-cn-0.22")
 #model = Model(r"./vosk-model-en-us-0.22")
 # You can also specify the possible word list
 #rec = KaldiRecognizer(model, 16000, "zero oh one two three four five six seven eight nine")
@@ -49,7 +49,7 @@ def continuous_listen():
             
             if text:
                 logging.info(f"Vosk heard: {text}")
-                if '小奔奔' in text or '停止' in text:
+                if '你好' in text or '停止' in text:
                     #print('stop')
                     stop_tts_event.set()
             text = ''
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         while running:
             if not msg_queue.empty():
                 msg = msg_queue.get()
-                if '小本本' in msg or '小笨笨' in msg or '小奔奔' in msg or stop_tts_event.set():
+                if '你好' in msg or '那好' in msg or '你 好' in msg or stop_tts_event.set():
                     # Example: Respond using TTS or pass message to OpenAI for processing
                     tts(' 我在 ')
                     #print(msg)
