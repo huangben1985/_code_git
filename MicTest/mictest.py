@@ -1,6 +1,9 @@
 import sounddevice as sd
 import scipy.io.wavfile as wav
 import numpy as np
+import sys
+import time
+import os
 
 def list_input_devices():
     print("Available input devices:")
@@ -25,15 +28,25 @@ def save_audio(filename, audio_data, sample_rate):
     wav.write(filename, sample_rate, audio_data)
     print(f"Audio saved to {filename}")
 
+def get_input_with_default(prompt, default_value):
+    try:
+        return input(prompt).strip()
+    except EOFError:
+        print(f"Using default value: {default_value}")
+        return str(default_value)
+
 def main():
     list_input_devices()
-    device_index = int(input("\nEnter the input device index to use: "))
-    duration = int(input("Enter duration to record (seconds): "))
+    time.sleep(3)
+    
+    # Get values from environment variables or use defaults
+    device_index = int(os.getenv('DEVICE_INDEX', get_input_with_default("\nInput device index to use: ", "0")))
+    duration = int(os.getenv('DURATION', get_input_with_default("Start to record (seconds):", "10")))
+    save = os.getenv('SAVE_AUDIO', get_input_with_default("Do you want to save the audio? (y/n): ", "n")).lower()
     
     audio_data, sample_rate = record_audio(device_index, duration)
     play_audio(audio_data, sample_rate)
     
-    save = input("Do you want to save the audio? (y/n): ").strip().lower()
     if save == 'y':
         save_audio("recorded_audio.wav", audio_data, sample_rate)
 

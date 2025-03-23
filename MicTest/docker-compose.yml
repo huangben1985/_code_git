@@ -1,0 +1,18 @@
+version: '3'
+services:
+  audio-app:
+    build: .
+    volumes:
+      - /dev/snd:/dev/snd
+      - ${XDG_RUNTIME_DIR}/pulse/native:/run/pulse/native
+      - ${HOME}/.config/pulse/cookie:/root/.config/pulse/cookie
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      - DISPLAY=${DISPLAY}
+      - PULSE_SERVER=/run/pulse/native
+      - PULSE_COOKIE=/root/.config/pulse/cookie
+      - DEVICE_INDEX=0
+      - DURATION=10
+      - SAVE_AUDIO=n
+    network_mode: "host" 

@@ -1,0 +1,27 @@
+FROM python:3.9-slim
+
+# Install system dependencies for audio
+RUN apt-get update && apt-get install -y \
+    portaudio19-dev \
+    python3-pyaudio \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code
+COPY mictest.py .
+
+# Set environment variables for audio device access
+ENV DISPLAY=:0
+ENV PULSE_SERVER=/run/pulse/native
+ENV PULSE_COOKIE=/root/.config/pulse/cookie
+
+# Create a volume for audio device access
+VOLUME ["/dev/snd"]
+
+# Run the application
+CMD ["python", "mictest.py"] 
