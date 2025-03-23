@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 
 
-model = Model(r"./vosk-model-cn-0.22")
+model = Model(r"./vosk-model-small-cn-0.22")
 #model = Model(r"./vosk-model-en-us-0.22")
 # You can also specify the possible word list
 #rec = KaldiRecognizer(model, 16000, "zero oh one two three four five six seven eight nine")
@@ -50,8 +50,8 @@ def continuous_listen():
             msg_queue.put(text)
             
             if text:
-                logging.info(f"Vosk heard: {text}")
-                if '小奔奔' in text or '停止' in text:
+                # logging.info(f"Vosk heard: {text}")
+                if any(kw.replace(" ", "") in text for kw in wake_words) or '停止' in text:  # Compare without spaces
                     #print('stop')
                     stop_tts_event.set()
             text = ''
@@ -82,19 +82,25 @@ if __name__ == '__main__':
         while running:
             if not msg_queue.empty():
                 msg = msg_queue.get()
-                if '小本本' in msg or '小笨笨' in msg or '小奔奔' in msg or stop_tts_event.set():
-                    # Example: Respond using TTS or pass message to OpenAI for processing
-                    tts(' 我在 ')
-                    #print(msg)
-                    msg1 = recognize_from_microphone()  # Recognize user query           
-                    logging.info(f"Heard: {msg1}")
-                    try:
-                        response = askOpenAI(msg1)  # Assuming askOpenAI is a valid function
-                        tts(response)  # Assuming tts function reads the response
-                        logging.info(f"Response: {response}")
-                    except Exception as e:
-                        logging.error(f"Error processing message: {e}")
-            
+                if any(kw.replace(" ", "") in msg for kw in wake_words):  # Compare without spaces
+                    stop_tts_event.clear()
+                    tts('干嘛？')
+
+                    # Optional: get new input using vosk
+                    # This part could be extracted into a function
+                    collected_text = ''
+                    collected_text = recognize_from_microphone()  # Recognize user query     
+
+                    logging.info(f"Heard: {collected_text}")
+
+                    if collected_text:
+                        try:
+                            response = askOpenAI(collected_text)
+                            tts(response)
+                            logging.info(f"Response: {response}")
+                        except Exception as e:
+                            logging.error(f"Error processing message: {e}")
+                
             time.sleep(0.1)  # Avoid busy-waiting
 
     except KeyboardInterrupt:
