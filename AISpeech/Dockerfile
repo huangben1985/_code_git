@@ -26,4 +26,4 @@ RUN mkdir -p ./log
 ENV PYTHONUNBUFFERED=1
 
 # Command to run the application
-CMD ["python", "SpeechMain.py"] 
+CMD ["python", "SpeechMain2.py"] 
