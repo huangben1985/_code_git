@@ -5,6 +5,7 @@ import pyaudio
 from pathlib import Path
 from dotenv import load_dotenv
 import threading
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -31,7 +32,9 @@ except ImportError:
     import sys
     sys.exit(1)
 
+# Configure speech recognition for Chinese
 speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
+speech_config.speech_recognition_language = "zh-CN"  # Set language to Chinese
 audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
 
 # Global thread-safe event for controlling TTS playback
@@ -81,24 +84,29 @@ def askOpenAI(question):
 #   utterance is determined by listening for silence at the end or until a maximum of 15 seconds of audio is processed.
 # speech to text
 def recognize_from_microphone():
-    # tts('您好，有什么可以帮助您？')
-    time.sleep(0.1)
-    speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
-    speech_recognition_result = speech_recognizer.recognize_once_async().get()
-    # Exception reminder
-    if speech_recognition_result.reason == speechsdk.ResultReason.RecognizedSpeech:
-        return speech_recognition_result.text
-    elif speech_recognition_result.reason == speechsdk.ResultReason.NoMatch:
-        print("No speech could be recognized: {}".format(speech_recognition_result.no_match_details))
-    elif speech_recognition_result.reason == speechsdk.ResultReason.Canceled:
-        cancellation_details = speech_recognition_result.cancellation_details
-        print("Speech Recognition canceled: {}".format(cancellation_details.reason))
-        if cancellation_details.reason == speechsdk.CancellationReason.Error:
-            print("Error details: {}".format(cancellation_details.error_details))
-            print("Did you set the speech resource key and region values?")
+    try:
+        time.sleep(0.1)
+        speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+        speech_recognition_result = speech_recognizer.recognize_once_async().get()
+        
+        if speech_recognition_result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            return speech_recognition_result.text
+        elif speech_recognition_result.reason == speechsdk.ResultReason.NoMatch:
+            logging.warning(f"No speech could be recognized: {speech_recognition_result.no_match_details}")
+            return ""
+        elif speech_recognition_result.reason == speechsdk.ResultReason.Canceled:
+            cancellation_details = speech_recognition_result.cancellation_details
+            logging.error(f"Speech Recognition canceled: {cancellation_details.reason}")
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                logging.error(f"Error details: {cancellation_details.error_details}")
+                logging.error("Did you set the speech resource key and region values?")
+            return ""
+    except Exception as e:
+        logging.error(f"Error in speech recognition: {e}")
+        return ""
 
 
 
 if __name__ == '__main__':
     # Test the functions
-    tts(' 你好！欢迎使用OpenAI语音助手。')
+    tts(' 你好,欢迎使用OpenAI语音助手。')

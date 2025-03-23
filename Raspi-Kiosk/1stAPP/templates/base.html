@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="{{url_for('static',filename='css/main.css')}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <style>
+        input, textarea {
+            -webkit-user-select: text; /* Safari */
+            -moz-user-select: text; /* Firefox */
+            -ms-user-select: text; /* IE10+/Edge */
+            user-select: text; /* Standard */
+        }
+    </style>
+    {% block head %}{% endblock %}
+
+  </head>
+  <body>
+    {% block body %}{% endblock %}
+  </body>

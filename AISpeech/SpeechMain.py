@@ -1,7 +1,3 @@
-#https://alphacephei.com/vosk/models
-# install pyaudio
-#lfd.uci.edu/~gohlke/pythonlibs/#pyaudio
-
 from vosk import Model, KaldiRecognizer
 import pyaudio
 from queue import Queue
@@ -9,6 +5,7 @@ from OpenAISpeech import askOpenAI,tts,recognize_from_microphone,stop_tts_event
 import logging
 import time
 from threading import Thread
+import json
 
 # Configure logging to write to a file
 logging.basicConfig(
@@ -20,18 +17,23 @@ logging.basicConfig(
     ]
 )
 
+
 model = Model(r"./vosk-model-cn-0.22")
 #model = Model(r"./vosk-model-en-us-0.22")
 # You can also specify the possible word list
 #rec = KaldiRecognizer(model, 16000, "zero oh one two three four five six seven eight nine")
 
 recognizer = KaldiRecognizer(model, 16000)
+recognizer2 = KaldiRecognizer(model, 16000)
 mic = pyaudio.PyAudio()
 logging.info(mic.get_default_input_device_info())
 stream = mic.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=4096)
 stream.start_stream()
 msg_queue = Queue()
 running = True
+
+wake_words = ['小庄同学', '小张同学']
+
 
 
 def continuous_listen():
@@ -42,14 +44,14 @@ def continuous_listen():
             # Listen for audio
             data = stream.read(4096)
             if recognizer.AcceptWaveform(data):
-                text = recognizer.Result()[14:-3] #.replace(" ", "")
+                text = recognizer.Result()[14:-3].replace(" ", "")  # Remove all spaces
             else:
                 text = ''
             msg_queue.put(text)
             
             if text:
                 logging.info(f"Vosk heard: {text}")
-                if '你好' in text or '停止' in text:
+                if '小奔奔' in text or '停止' in text:
                     #print('stop')
                     stop_tts_event.set()
             text = ''
@@ -80,7 +82,7 @@ if __name__ == '__main__':
         while running:
             if not msg_queue.empty():
                 msg = msg_queue.get()
-                if '你好' in msg or '那好' in msg or '你 好' in msg or stop_tts_event.set():
+                if '小本本' in msg or '小笨笨' in msg or '小奔奔' in msg or stop_tts_event.set():
                     # Example: Respond using TTS or pass message to OpenAI for processing
                     tts(' 我在 ')
                     #print(msg)
