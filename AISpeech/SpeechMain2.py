@@ -68,12 +68,12 @@ def continuous_listen(audio_manager):
                 text = result.get("text", "").strip().replace(" ", "")
             else:
                 text = ''
-            msg_queue.put(text)
             
             if text:
                 # logging.info(f"Vosk heard: {text}")
                 if any(kw.replace(" ", "") in text for kw in wake_words) or '停止' in text:
                     stop_tts_event.set()
+            msg_queue.put(text)
             text = ''
         except Exception as e:
             logging.error(f"Error in continuous_listen: {e}")
@@ -96,15 +96,16 @@ if __name__ == '__main__':
             while running:
                 if not msg_queue.empty():
                     msg = msg_queue.get()
-                    if any(kw in msg for kw in wake_words):
+                    if any(kw.replace(" ", "") in msg.replace(" ", "") for kw in wake_words):
                         stop_tts_event.clear()
                         msg = ''
-                        tts('到!')
-                        time.sleep(1)
+                        tts('干嘛!')
 
                         collected_text = ''
                         try:
                             collected_text = recognize_from_microphone()
+                            if collected_text:
+                                collected_text = collected_text.strip().replace(" ", "")
                             
                             logging.info(f"Heard: {collected_text}")
 

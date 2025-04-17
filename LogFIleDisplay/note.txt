@@ -1,0 +1,21 @@
+Welcome to Note Display!
+You can edit this file and the changes will be shown in real-time in the application. 
+
+
+
+Features:
+Select any file to monitor
+Real-time updates when the file changes
+Clear display button to reset the view
+Refresh button to manually update
+Status bar shows current monitoring status
+
+To use the application:
+Run the application
+When the application starts, it will automatically open a file browser dialog
+Select any file you want to monitor
+The application will:
+Display the file's current content
+Monitor the file for changes
+Show new content as it appears
+Auto-scroll to keep the latest content visible

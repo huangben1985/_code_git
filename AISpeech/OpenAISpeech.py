@@ -6,18 +6,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 import threading
 import logging
+import azure.cognitiveservices.speech as speechsdk
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve API key from environment variables for openai
-openai_key = os.getenv("openai_key")
-openai.api_key = openai_key
-client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
+# # Initialize OpenAI client with just the API key
+#client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Retrieve API key from environment variables for azure speech
-speech_key = os.getenv("speech_key")
-service_region = os.getenv("service_region")
+speech_key = os.getenv("SPEECH_KEY")
+service_region = os.getenv("SERVICE_REGION")
 
 try:
     import azure.cognitiveservices.speech as speechsdk
@@ -67,7 +67,7 @@ def askOpenAI(question):
     messages.append({"role": "user", "content": question})
     
     # Call the OpenAI API  # gpt-3.5-turbo",
-    completion = client.chat.completions.create(
+    completion = openai.chat.completions.create(
         model="gpt-4-turbo" ,
         messages=messages
     )

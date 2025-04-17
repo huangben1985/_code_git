@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  aispeech:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    devices:
+      - /dev/snd:/dev/snd  # Map sound device for audio access
+    volumes:
+      - ./vosk-model-small-cn-0.22:/app/vosk-model-small-cn-0.22  # Mount Vosk model
+      - ./log:/app/log  # Mount log directory
+      - /run/user/1000/pulse:/run/pulse
+      - ~/.config/pulse/cookie:/root/.config/pulse/cookie
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PULSE_SERVER=unix:/run/pulse/native
+      - PULSE_COOKIE=/root/.config/pulse/cookie
+    restart: unless-stopped
+    privileged: true  # Needed for audio device access
+    network_mode: host  # Use host network for better audio performance 
