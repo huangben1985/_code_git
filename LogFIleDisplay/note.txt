@@ -1,4 +1,4 @@
-Welcome to Note Display!
+Welcome to Log Display!
 You can edit this file and the changes will be shown in real-time in the application. 
 
 
