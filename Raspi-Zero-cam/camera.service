@@ -1,0 +1,14 @@
+[Unit]
+Description=Camera Recording and Web Server
+After=network.target
+
+[Service]
+Type=simple
+User=ben
+WorkingDirectory=/home/ben/code/camera2
+ExecStart=/usr/bin/python3 /home/ben/code/camera2/run_all.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target 
